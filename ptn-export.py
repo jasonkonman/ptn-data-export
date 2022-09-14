@@ -9,18 +9,18 @@ def main():
     ### Config lookup 
     config_lookup = {
         "staging": {
-            "gql": STAGING_GQL,
-            "aws_id": AWS_ID,
-            "aws_secret": AWS_SECRET,
-            "client_id": STAGING_CLIENT_ID,
-            "region_name": STAGING_REGION
+            "gql": st.secrets["STAGING_GQL"],
+            "aws_id": st.secrets["AWS_ID"],
+            "aws_secret": st.secrets["AWS_SECRET"],
+            "client_id": st.secrets["STAGING_CLIENT_ID"],
+            "region_name": st.secrets["STAGING_REGION"]
             },
         "prod": {
-            "gql": PROD_GQL,
-            "aws_id": AWS_ID,
-            "aws_secret": AWS_SECRET,
-            "client_id": PROD_CLIENT_ID,
-            "region_name": STAGING_REGION
+            "gql": st.secrets["PROD_GQL"],
+            "aws_id": st.secrets["AWS_ID"],
+            "aws_secret": st.secrets["AWS_SECRET"],
+            "client_id": st.secrets["PROD_CLIENT_ID"],
+            "region_name": st.secrets["STAGING_REGION"]
             }
         }
 
