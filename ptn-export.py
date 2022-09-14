@@ -20,7 +20,7 @@ def main():
             "aws_id": st.secrets["AWS_ID"],
             "aws_secret": st.secrets["AWS_SECRET"],
             "client_id": st.secrets["PROD_CLIENT_ID"],
-            "region_name": st.secrets["STAGING_REGION"]
+            "region_name": st.secrets["PROD_REGION"]
             }
         }
 
@@ -38,7 +38,7 @@ def main():
 
     ### Execute
     if submit_button:
-        print(active_config)
+        # print(active_config)
         try:
             st.success(f"Configuration Accepted\n\n")
             st.text("")
@@ -52,7 +52,7 @@ def main():
             _app_client = config_lookup[active_config]['client_id']
             _app_region = config_lookup[active_config]['region_name']
             endpoint = config_lookup[active_config]['gql']
-            ### print(_aws_access_key_id, _aws_secret_access_key,_app_client,endpoint)
+            # print(_aws_access_key_id, _aws_secret_access_key,_app_client,endpoint)
 
             ### Client + Query
             cognito = boto3.client('cognito-idp', aws_access_key_id=_aws_access_key_id, aws_secret_access_key=_aws_secret_access_key, region_name=_app_region)
@@ -62,7 +62,9 @@ def main():
                 idtoken = cognito.initiate_auth(AuthFlow='USER_PASSWORD_AUTH', 
                                 AuthParameters={'USERNAME': _app_username,'PASSWORD': _app_pw},
                                 ClientId=_app_client)['AuthenticationResult']['IdToken'] 
-
+                
+            print(idtoken)
+            print("starting query")
             headers = {'Authorization': idtoken, 'Content-Type':'application/json'}
             query = "query GetAnswersSheets {\n\tmy {\n\t\tid\n\t\tactivities(lastUpdateIdentifier: \"2022-08-01\") {\n\t\t\tid\n\t\t\tdateStart\n\t\t\tdateEnd\n\t\t\ttimeStart\n\t\t\ttimeEnd\n\t\t\tstate\n      answersSheets{\n        id\n        state\n        completedDate\n        completedTime\n        questionnaire{\n          id\n          version\n          name\n          minutesToComplete\n          mainQuestionMetric\n          mainQuestionHighReference\n          mainQuestionLowReference\n          mainQuestionUnit\n          mainQuestionId\n          \n          translations{\n\t\t\t\t\t\tid\n\t\t\t\t\t\tversion\n            language\n\t\t\t\t\t\tquestionnaireName\n\t\t\t\t\t\tdata\n          }\n        }\n      }\n\t\t}\n\t}\n}"
 
