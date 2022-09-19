@@ -70,6 +70,9 @@ def main():
                     idtoken = cognito.initiate_auth(AuthFlow='USER_PASSWORD_AUTH', 
                                     AuthParameters={'USERNAME': _app_username,'PASSWORD': _app_pw},
                                     ClientId=_app_client)['AuthenticationResult']['IdToken'] 
+                
+                st.header("idtoken")
+                st.code(idtoken)
                     
                 # print(idtoken)
                 # print("starting query")
@@ -87,7 +90,7 @@ def main():
 
                 r = requests.post(endpoint, json={'query': query}, headers=headers)
                 activities = json.loads(r.content)['data']['my']['activities']
-                st.text("Done!")   
+                st.text("Done!")
 
                 ### Aggregate Data
                 combined_list = []
