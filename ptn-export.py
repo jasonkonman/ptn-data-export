@@ -45,6 +45,10 @@ def main():
 
     ### Execute
     if submit_button:
+        st.session_state['last_update_reference'] = ''
+        st.session_state['follow_up_query'] = True
+        st.session_state['query_counter'] = 0
+
         if sha512hash(basic_pw) == st.secrets["SERVICE_PASSWORD_HASH"]:
         # print(active_config)
             try:
@@ -77,51 +81,83 @@ def main():
                 # print(idtoken)
                 # print("starting query")
                 headers = {'Authorization': idtoken, 'Content-Type':'application/json'}
-                prod_query = "query GetAnswersSheets{my{id activities{id dateStart dateEnd timeStart timeEnd state answersSheets{id state completedDate completedTime encodedResults questionnaire{id version name}}}}}"
-
-                staging_query = "query GetAnswersSheets{my{id activities{id dateStart dateEnd timeStart timeEnd lastUpdateReference state answersSheets{id state completedDate completedTime encodedResults questionnaire{id version name}}}}}"
-
-                if active_config == "staging":
-                    query = staging_query
-                elif active_config == "prod":
-                    query = prod_query
-                else :
-                    query = prod_query
-
-                r = requests.post(endpoint, json={'query': query}, headers=headers)
-                activities = json.loads(r.content)['data']['my']['activities']
-                st.text("Done!")
-
-                ### Aggregate Data
                 combined_list = []
-                for a in activities: 
-                    if len(a['answersSheets']) > 0:
-                        for ans in a['answersSheets']:
-                            out = {}
-                            out['activityId'] = a['id']
-                            out['activity.dateStart'] = a['dateStart']
-                            out['activity.dateEnd'] = a['dateEnd']
-                            out['activity.timeStart'] = a['timeStart']
-                            out['activity.timeEnd'] = a['timeEnd']
-                            out['activity.state'] = a['state']
-                            
-                            ### New in Staging
-                            if active_config == "staging":
-                                out['activity.lastUpdateReference'] = a['lastUpdateReference']
-                            elif active_config == "prod":
-                                pass
-                            else:
-                                pass
 
-                            ### Answersheet Data
-                            out['asId'] = ans['id']
-                            out['as.completedDate'] = ans['completedDate']
-                            out['as.completedTime'] = ans['completedTime']
-                            out['as.state'] = ans['state']
-                            out['as.questionnaire'] = ans['questionnaire']['name']
-                            combined_list.append(out)
+                def run_and_parse_request(last_update):
+                    prod_query = "query GetAnswersSheets{my{id activities{id dateStart dateEnd timeStart timeEnd state answersSheets{id state completedDate completedTime encodedResults questionnaire{id version name}}}}}"
+
+                    staging_query = "query GetAnswersSheets{my{id activities(pagination: {limit: 30 orderBy: \"lastUpdateReference\" afterReference: \"%s\"}){id dateStart dateEnd timeStart timeEnd lastUpdateReference state answersSheets{id state completedDate completedTime encodedResults questionnaire{id version name}}}}}" % (last_update)
+
+                    if active_config == "staging":
+                        query = staging_query
+                    elif active_config == "prod":
+                        query = prod_query
+                    else :
+                        query = prod_query
+
+                    r = requests.post(endpoint, json={'query': query}, headers=headers)
+                    # print(r.content)
+                    # print(r.status_code)
+                    
+                    # print(r.url, " ", r.body)
+                    if r.status_code == 200:
+                        activities = json.loads(r.content)['data']['my']['activities']
+                        # print (len(activities))
+                        if len(activities) > 0:
+                            st.session_state['last_update_reference'] = activities[-1]['lastUpdateReference']
+
+                            ### Aggregate Data
+                            for a in activities: 
+                                if len(a['answersSheets']) > 0:
+                                    for ans in a['answersSheets']:
+                                        out = {}
+                                        out['activityId'] = a['id']
+                                        out['activity.dateStart'] = a['dateStart']
+                                        out['activity.dateEnd'] = a['dateEnd']
+                                        out['activity.timeStart'] = a['timeStart']
+                                        out['activity.timeEnd'] = a['timeEnd']
+                                        out['activity.state'] = a['state']
+                                        
+                                        ### New in Staging
+                                        if active_config == "staging":
+                                            out['activity.lastUpdateReference'] = a['lastUpdateReference']
+                                        elif active_config == "prod":
+                                            pass
+                                        else:
+                                            pass
+
+                                        ### Answersheet Data
+                                        out['asId'] = ans['id']
+                                        out['as.completedDate'] = ans['completedDate']
+                                        out['as.completedTime'] = ans['completedTime']
+                                        out['as.state'] = ans['state']
+                                        out['as.questionnaire'] = ans['questionnaire']['name']
+                                        combined_list.append(out)
+                                else:
+                                    pass
+                        else:
+                            st.session_state['follow_up_query'] = False
+                            st.success(f"Activities Exhausted: {r.status_code}")
                     else:
-                        pass
+                        st.session_state['follow_up_query'] = False
+                        st.error(f"HTTP Status Code: {r.status_code}")
+
+                ### Run Loop
+                while st.session_state['follow_up_query'] == True:
+                    # print("start loop")
+                    # print(st.session_state['last_update_reference'])
+                    # print(st.session_state['follow_up_query'])
+                    # print(st.session_state['query_counter'])
+                    run_and_parse_request(st.session_state['last_update_reference'])
+                    st.session_state['query_counter'] += 1
+                    # print("before restart loop")
+                    # print(st.session_state['last_update_reference'])
+                    # print(st.session_state['follow_up_query'])
+                    # print(st.session_state['query_counter'])
+                    # print(len(combined_list))
+                else:
+                    st.text(f"Done! {st.session_state['query_counter']} Query Loops Complete")
+                    # print(combined_list)
                 
                 ### Output Functions
                 def output_csv(dataframe, has_header=True): 
