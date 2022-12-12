@@ -91,7 +91,7 @@ def main():
                     if active_config == "staging":
                         query = staging_query
                     elif active_config == "prod":
-                        query = prod_query
+                        query = staging_query
                     else :
                         query = prod_query
 
@@ -122,7 +122,7 @@ def main():
                                         if active_config == "staging":
                                             out['activity.lastUpdateReference'] = a['lastUpdateReference']
                                         elif active_config == "prod":
-                                            pass
+                                            out['activity.lastUpdateReference'] = a['lastUpdateReference']
                                         else:
                                             pass
 
